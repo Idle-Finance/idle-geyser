@@ -1,14 +1,22 @@
 {
-  "name": "hardhat-project",
-  "devDependencies": {
+  "name": "idle-geyser",
+  "description": "Fork of ampleforth geyser for the idle protocol",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/Idle-Finance/idle-geyser"
+  },
+  "dependencies": {
     "@ledgerhq/hw-app-eth": "^5.49.0",
     "@ledgerhq/hw-transport-node-hid": "^5.49.0",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@openzeppelin/test-helpers": "^0.5.10",
     "chai": "^4.3.4",
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.1.0",
     "hardhat": "^2.2.0",
-    "openzeppelin-solidity": "^2.4.0"
+    "openzeppelin-solidity": "^2.4.0",
+    "dotenv": "^8.2.0"
   }
 }
