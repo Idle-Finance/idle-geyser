@@ -83,9 +83,9 @@ async function main() {
   console.log(`Transfering ownership to multisig: ${addresses.multisigAddress}`)
   await geyser.transferOwnership(addresses.multisigAddress)
   
-  console.log(`Contract deployed to ${networkName}`)
   // from here the multisigAddress must create the funding schedule
   // done by calling `lockTokens`
+  console.log(`Contract deployment '${networkName}' complete`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
