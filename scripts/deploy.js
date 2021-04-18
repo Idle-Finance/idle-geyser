@@ -24,9 +24,9 @@ async function main() {
   
   let networkName = hre.network.name;
   switch (networkName) {
-    case 'local':
+    case 'hardhat':
       signer = (await hre.ethers.getSigners())[0]; break;
-    case 'fork':
+    case 'local':
       signer = (await hre.ethers.getSigners())[0]; break;
     case 'kovan':
       signer = new HardwareSigner(ethers.provider, null, "m/44'/60'/1'/0/0"); break; // Use seperate account for kovan
@@ -40,7 +40,7 @@ async function main() {
   senderAddress = await signer.getAddress()
   console.log(`Using sender address ${senderAddress}`)
 
-  if (networkName == "mainnet" || networkName == "fork") {
+  if (networkName == "mainnet" || networkName == "hardhat") {
     LPToken = addresses.networks.mainnet.sushiLPToken
     idleToken = addresses.networks.mainnet.idle
   } else {
