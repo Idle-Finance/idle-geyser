@@ -3,6 +3,7 @@
 const { ethers } = require("hardhat");
 const hre = require("hardhat")
 const { addresses } = require("../lib/index")
+const {time} = require("@openzeppelin/test-helpers")
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -12,7 +13,7 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
   
-  let networkName = hre.network.name;
+  let networkName = hre.network.name
   if (networkName != "hardhat") {
     throw "This script can only run in hardhat network at this time"
   }
@@ -31,12 +32,11 @@ async function main() {
   console.log(`########## PERFORMING MOCK DEPLOYMENT TO ${networkName} ##########`) 
   console.log(`Using sender address ${senderAddress}`)
 
-  const TokenGeyser = await hre.ethers.getContractFactory("TokenGeyser", signer);
-  const MockERC20 = await ethers.getContractFactory("MockERC20", signer);
-  const TokenPool = await ethers.getContractFactory("TokenPool", signer)
+  const TokenGeyser = await hre.ethers.getContractFactory("TokenGeyser", signer)
+  const MockERC20 = await ethers.getContractFactory("MockERC20", signer)
 
   let mockLP = await MockERC20.deploy("100000000000000000000") // 100 LP tokens
-  await mockLP.deployed();
+  await mockLP.deployed()
   let LPToken = mockLP.address
   let idleToken = addresses.networks.mainnet.idle
   
@@ -64,15 +64,31 @@ async function main() {
   console.log(`Contract deployment '${networkName}' complete`)
   
   console.log("Impersonating Multisig")
-  geyser = await geyser.connect(multisigSigner)
+  let multiSigGeyser = await geyser.connect(multisigSigner) // geyser controlled by multisig
 
   const idleTokenContract = await hre.ethers.getContractAt("MockERC20", idleToken, multisigSigner)
 
   console.log("Approving geyser contract to use idle")
-  await idleTokenContract.approve(geyser.address, ethers.constants.MaxUint256) // signed by multisig
+  await idleTokenContract.approve(multiSigGeyser.address, ethers.constants.MaxUint256) // signed by multisig
 
   console.log("Locking 1000 IDLE for 6 months")
-  await geyser.lockTokens("1000000000000000000000", "15552000") // Test with 1000 IDLE
+  await multiSigGeyser.lockTokens("1000000000000000000000", "15552000") // Test with 1000 IDLE
+
+  console.log("Approving IDLE for geyser")
+  await mockLP.approve(multiSigGeyser.address, ethers.constants.MaxUint256)
+  
+  console.log("Staking 100 LP tokens")
+  await geyser.stake("100000000000000000000", "0x") // stake LP token
+
+  time.increase(time.duration.days(30*6+1)) // 30 days = 1 month
+  // await hre.network.provider.request({method: "evm_increaseTime", params: ["15552000"]})
+
+  console.log("Unstaking 100 LP tokens")
+  await geyser.unstake("100000000000000000000", "0x")
+
+  let finalBalance = await idleTokenContract.balanceOf(senderAddress)
+  console.log(finalBalance.toString())
+  
 }
 
 // We recommend this pattern to be able to use async/await everywhere
