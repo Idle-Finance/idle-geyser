@@ -72,7 +72,7 @@ async function main() {
     idleToken,
     "10000", // maxUnlockSchedules; same value as ampleforth
     "33", // starting bonus [boosted to 3x over bonus period duration]
-    "5184000", // Bonus period in seconds [2 months in seconds]
+    "10368000", // Bonus period in seconds [4 months in seconds]
     "1000000" // initialSharesPerToken; same value as ampleforth
   )
 
