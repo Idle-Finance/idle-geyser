@@ -1,4 +1,4 @@
-pragma solidity 0.5.0;
+pragma solidity 0.5.17;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
@@ -6,6 +6,7 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "./IStaking.sol";
 import "./TokenPool.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Token Geyser
