@@ -18,9 +18,11 @@ async function main() {
   // transfer 10 ETH to multisig
   let signer = (await hre.ethers.getSigners())[0];
   let signer2 = (await hre.ethers.getSigners())[1];
+  let signer3 = (await hre.ethers.getSigners())[1];
+  const senderAddress = await signer.getAddress()
+  const senderAddress2 = await signer2.getAddress()
+  const senderAddress3 = await signer3.getAddress()
   await signer.sendTransaction({to: addresses.multisigAddress, value: toETH("10")}) // 10 ETH
-  senderAddress = await signer.getAddress()
-  senderAddress2 = await signer2.getAddress()
 
   console.log(`########## PERFORMING MOCK DEPLOYMENT TO ${networkName} ##########`)
   console.log(`Using sender address ${senderAddress}`)
@@ -106,24 +108,27 @@ async function main() {
   console.log('Starting test...')
 
   // Test With geyser single user
-  // await singleUserTest(addresses.multisigAddress, toETH('100'), 30, toETH('333'), blockNumber); // 49 (49000056712962962962)
-  // await singleUserTest(addresses.multisigAddress, toETH('100'), 60, toETH('333'), blockNumber); // 132 (132000076388888888888)
-  // await singleUserTest(addresses.multisigAddress, toETH('100'), 90, toETH('333'), blockNumber); // 249 (249000096064814814814)
-  // await singleUserTest(addresses.multisigAddress, toETH('100'), 120, toETH('600'), blockNumber); // 400 (400000115740740740740)
-  // await singleUserTest(addresses.multisigAddress, toETH('100'), 150, toETH('600'), blockNumber); // 500 (500000115740740740740)
+  // await singleUserTest(addresses.multisigAddress, toETH('100'), 30, toETH('49'), blockNumber); // 49 (49000056712962962962)
+  // await singleUserTest(addresses.multisigAddress, toETH('100'), 60, toETH('132'), blockNumber); // 132 (132000076388888888888)
+  // await singleUserTest(addresses.multisigAddress, toETH('100'), 90, toETH('249'), blockNumber); // 249 (249000096064814814814)
+  // await singleUserTest(addresses.multisigAddress, toETH('100'), 120, toETH('400'), blockNumber); // 400 (400000115740740740740)
+  // await singleUserTest(addresses.multisigAddress, toETH('100'), 150, toETH('500'), blockNumber); // 500 (500000115740740740740)
   // await singleUserTest(addresses.multisigAddress, toETH('100'), 180, toETH('600'), blockNumber); // 600
 
   // Test with multiple users and multiple deposits
+  // Test 1
+  // await singleUserTest(senderAddress, toETH('100'), 0, toETH('0'));
+  // await singleUserTest(senderAddress2, toETH('100'), 0, toETH('0'));
+  // await waitDays(120);
+  // await unstake(senderAddress, toETH('100'), toETH('200'))
+  // await unstake(senderAddress2, toETH('100'), toETH('200'))
+
+  // Test 2
   await singleUserTest(senderAddress, toETH('100'), 0, toETH('0'));
   await singleUserTest(senderAddress2, toETH('100'), 0, toETH('0'));
-
   await waitDays(30);
-
-  // should be around 24.5 so this will fails but that's enough to get the idea
   await unstake(senderAddress, toETH('100'), toETH('24.5'))
   await unstake(senderAddress2, toETH('100'), toETH('24.5'))
-
-  // TODO Test with single user and multiple deposits
 }
 
 // We recommend this pattern to be able to use async/await everywhere

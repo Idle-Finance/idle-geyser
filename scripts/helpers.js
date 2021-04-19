@@ -23,18 +23,18 @@ module.exports = {
   waitDays: async d => {
     await time.increase(time.duration.days(d));
   },
-  resetFork: async blockNumber => {
-    console.log('resetting fork')
-    await hre.network.provider.request({
-      method: "hardhat_reset",
-      params: [
-        {
-          forking: {
-            jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/oO-FJDpNYajB4VNK9Wx5jj5ibmR2AWbO`,
-            blockNumber,
-          }
-        }
-      ]
-    });
-  }
+  // resetFork: async blockNumber => {
+  //   console.log('resetting fork')
+  //   await hre.network.provider.request({
+  //     method: "hardhat_reset",
+  //     params: [
+  //       {
+  //         forking: {
+  //           jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/`,
+  //           blockNumber,
+  //         }
+  //       }
+  //     ]
+  //   });
+  // }
 }
