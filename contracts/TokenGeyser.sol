@@ -8,6 +8,8 @@ import "./IStaking.sol";
 import "./TokenPool.sol";
 import "hardhat/console.sol";
 
+import "./MasterChefTokenizer.sol";
+
 /**
  * @title Token Geyser
  * @dev A smart-contract based mechanism to distribute tokens over time, inspired loosely by
@@ -40,6 +42,8 @@ contract TokenGeyser is IStaking, Ownable {
     TokenPool private _unlockedPool;
     TokenPool private _lockedPool;
 
+    MasterChefTokenizer private _tokenizer;
+    IERC20 private _unwrappedStakingToken;
     //
     // Time-bonus params
     //
@@ -103,7 +107,8 @@ contract TokenGeyser is IStaking, Ownable {
      * @param initialSharesPerToken Number of shares to mint per staking token on first stake.
      */
     constructor(IERC20 stakingToken, IERC20 distributionToken, uint256 maxUnlockSchedules,
-                uint256 startBonus_, uint256 bonusPeriodSec_, uint256 initialSharesPerToken) public {
+                uint256 startBonus_, uint256 bonusPeriodSec_, uint256 initialSharesPerToken,
+                IERC20 unwrappedStakingToken_) public {
         // The start bonus must be some fraction of the max. (i.e. <= 100%)
         require(startBonus_ <= 10**BONUS_DECIMALS, 'TokenGeyser: start bonus too high');
         // If no period is desired, instead set startBonus = 100%
@@ -118,6 +123,11 @@ contract TokenGeyser is IStaking, Ownable {
         bonusPeriodSec = bonusPeriodSec_;
         _maxUnlockSchedules = maxUnlockSchedules;
         _initialSharesPerToken = initialSharesPerToken;
+
+        _tokenizer = MasterChefTokenizer(address(stakingToken)); // staking token will be the tokenizer
+        _unwrappedStakingToken = unwrappedStakingToken_;
+        
+        _unwrappedStakingToken.approve(address(_tokenizer), uint256(-1)); // approve unwrapped LP token to be wrapped
     }
 
     /**
@@ -133,6 +143,12 @@ contract TokenGeyser is IStaking, Ownable {
     function getDistributionToken() public view returns (IERC20) {
         assert(_unlockedPool.token() == _lockedPool.token());
         return _unlockedPool.token();
+    }
+
+    function wrapAndStake(uint256 amount) external {
+        _unwrappedStakingToken.transferFrom(msg.sender, address(this), amount); // 
+        _tokenizer.wrap(amount); // tokeniser will wrap tokens and send to geyser contract
+        _stakeFor(address(this), msg.sender, amount); // msg.sender is the beneficiary
     }
 
     /**
@@ -191,6 +207,12 @@ contract TokenGeyser is IStaking, Ownable {
             'TokenGeyser: transfer into staking pool failed');
 
         emit Staked(beneficiary, amount, totalStakedFor(beneficiary), "");
+    }
+
+    function unstakeAndunwrap(uint256 amount) external {
+        // this sends the rewards + wrapped stake to msg.sender
+        _unstake(amount);
+        _tokenizer.unwrap(amount, msg.sender);
     }
 
     /**
