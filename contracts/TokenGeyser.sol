@@ -212,7 +212,7 @@ contract TokenGeyser is IStaking, Ownable {
     function unstakeAndunwrap(uint256 amount) external {
         // this sends the rewards + wrapped stake to msg.sender
         _unstake(amount);
-        _tokenizer.unwrap(amount, msg.sender);
+        _tokenizer.unwrapFor(amount, msg.sender);
     }
 
     /**
