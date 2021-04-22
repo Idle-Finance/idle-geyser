@@ -5,8 +5,8 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "./IStaking.sol";
+import "./IERC20Permit.sol";
 import "./TokenPool.sol";
-import "hardhat/console.sol";
 
 import "./MasterChefTokenizer.sol";
 
@@ -126,7 +126,7 @@ contract TokenGeyser is IStaking, Ownable {
 
         _tokenizer = MasterChefTokenizer(address(stakingToken)); // staking token will be the tokenizer
         _unwrappedStakingToken = unwrappedStakingToken_;
-        
+
         _unwrappedStakingToken.approve(address(_tokenizer), uint256(-1)); // approve unwrapped LP token to be wrapped
     }
 
@@ -145,8 +145,19 @@ contract TokenGeyser is IStaking, Ownable {
         return _unlockedPool.token();
     }
 
-    function wrapAndStake(uint256 amount) external {
-        _unwrappedStakingToken.transferFrom(msg.sender, address(this), amount); // 
+
+    function permitWrapAndStake(uint256 amount, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external {
+        IERC20Permit(address(_unwrappedStakingToken)).permit(msg.sender, address(this), amount, expiry, v, r, s);
+        wrapAndStake(amount);
+    }
+
+    function permitWrapAndStakeUnlimited(uint256 amount, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external {
+        IERC20Permit(address(_unwrappedStakingToken)).permit(msg.sender, address(this), uint256(-1), expiry, v, r, s);
+        wrapAndStake(amount);
+    }
+
+    function wrapAndStake(uint256 amount) public {
+        _unwrappedStakingToken.transferFrom(msg.sender, address(this), amount);
         _tokenizer.wrap(amount); // tokeniser will wrap tokens and send to geyser contract
         _stakeFor(address(this), msg.sender, amount); // msg.sender is the beneficiary
     }
@@ -209,9 +220,10 @@ contract TokenGeyser is IStaking, Ownable {
         emit Staked(beneficiary, amount, totalStakedFor(beneficiary), "");
     }
 
-    function unstakeAndunwrap(uint256 amount) external {
+    function unstakeAndUnwrap(uint256 amount) external {
         // this sends the rewards + wrapped stake to msg.sender
         _unstake(amount);
+        // wLP are burned from msg.sender
         _tokenizer.unwrapFor(amount, msg.sender);
     }
 
