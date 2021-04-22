@@ -40,12 +40,6 @@ async function main() {
   let mockLP = sushiLP;
   const [mockLPSigned, mockLPSigner] = await sudo(addresses.networks.mainnet.userWithSushiLP, mockLP);
   await mockLPSigned.transfer(signer.address, toETH('100')); // 100 LP shares
-  // await mockLPSigned.transfer(addresses.multisigAddress, toETH('100')); // 100 LP shares
-
-  // const MockERC20 = await hre.ethers.getContractFactory("MockERC20", signer);
-  // let mockLP = await MockERC20.deploy(toETH('10000'));
-  // await mockLP.deployed()
-  // await mockLP.transfer(addresses.multisigAddress, toETH('1000'));
   console.log(`Using the following address for LP Token: ${mockLP.address}`)
 
   let tokenizer = await MasterChefTokenizer.deploy(
