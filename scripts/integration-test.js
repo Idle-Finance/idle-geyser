@@ -38,9 +38,6 @@ async function main() {
 
   const sushiLP = await hre.ethers.getContractAt("IERC20", addresses.networks.mainnet.sushiLPToken);
   let mockLP = sushiLP;
-  const [mockLPSigned, mockLPSigner] = await sudo(addresses.networks.mainnet.userWithSushiLP, mockLP);
-  await mockLPSigned.transfer(signer.address, toETH('100')); // 100 LP shares
-  console.log(`Using the following address for LP Token: ${mockLP.address}`)
 
   let tokenizer = await MasterChefTokenizer.deploy(
     "Wrapper sushi IDLE/ETH LP",
@@ -75,6 +72,14 @@ async function main() {
   console.log('###################');
   // from here the multisigAddress must create the funding schedule
   // done by calling `lockTokens`
+
+  if (network == 'mainnet') {
+    return;
+  }
+
+  const [mockLPSigned, mockLPSigner] = await sudo(addresses.networks.mainnet.userWithSushiLP, mockLP);
+  await mockLPSigned.transfer(signer.address, toETH('100')); // 100 LP shares
+  console.log(`Using the following address for LP Token: ${mockLP.address}`)
 
   const lock = async (amount) => {
     let [multiSigGeyser, multiSigGeyserSigner] = await sudo(addresses.multisigAddress, geyser);
@@ -128,32 +133,20 @@ async function main() {
   console.log('Starting test...')
 
   // Test With geyser single user
-  await singleUserTest(addresses.multisigAddress, toETH('10'), 30, toETH('49')); // 49 (49000056712962962962)
-  // await singleUserTest(addresses.multisigAddress, toETH('10'), 60, toETH('132'), blockNumber); // 132 (132000076388888888888)
-  // await singleUserTest(addresses.multisigAddress, toETH('10'), 90, toETH('249'), blockNumber); // 249 (249000096064814814814)
-  // await singleUserTest(addresses.multisigAddress, toETH('10'), 120, toETH('400'), blockNumber); // 400 (400000115740740740740)
-  // await singleUserTest(addresses.multisigAddress, toETH('10'), 150, toETH('500'), blockNumber); // 500 (500000115740740740740)
-  // await singleUserTest(addresses.multisigAddress, toETH('10'), 180, toETH('600'), blockNumber); // 600
+  await singleUserTest(addresses.multisigAddress, toETH('10'), 30, '49000056712962962962'); // 49
+  // await singleUserTest(addresses.multisigAddress, toETH('10'), 60, '132000101851851851851'); // 132
+  // await singleUserTest(addresses.multisigAddress, toETH('10'), 90, '249000128086419753085'); // 249
+  // await singleUserTest(addresses.multisigAddress, toETH('10'), 120, '400000192901234567900'); // 400
+  // await singleUserTest(addresses.multisigAddress, toETH('10'), 150, '500000154320987654320'); // 500
+  // await singleUserTest(addresses.multisigAddress, toETH('10'), 180, toETH('600')); // 600
 
   // Test with multiple users and multiple deposits
   // Test 1
-  // await singleUserTest(senderAddress, toETH('100'), 0, toETH('0'));
-  // await singleUserTest(senderAddress2, toETH('100'), 0, toETH('0'));
+  // await singleUserTest(senderAddress, toETH('10'), 0, toETH('0'));
+  // await singleUserTest(senderAddress2, toETH('10'), 0, toETH('0'));
   // await waitDays(120);
-  // await unstake(senderAddress, toETH('100'), toETH('200'))
-  // await unstake(senderAddress2, toETH('100'), toETH('200'))
-
-  // // Test 2
-  // await singleUserTest(senderAddress, toETH('100'), 0, toETH('0'));
-  // await singleUserTest(senderAddress2, toETH('100'), 0, toETH('0'));
-  // await singleUserTest(senderAddress3, toETH('100'), 0, toETH('0'));
-  // await singleUserTest(senderAddress4, toETH('100'), 0, toETH('0'));
-  // await waitDays(30);
-  // await unstake(senderAddress, toETH('100'), toETH('12.25'))
-  // // await geyser.unlockTokens();
-  // await unstake(senderAddress2, toETH('100'), toETH('12.25'))
-  // await unstake(senderAddress3, toETH('100'), toETH('12.25'))
-  // await unstake(senderAddress4, toETH('100'), toETH('12.25'))
+  // await unstake(senderAddress, toETH('10'), '200000163966061941386'); // 200
+  // await unstake(senderAddress2, toETH('10'), '200000144675913367255'); // 200
 }
 
 // We recommend this pattern to be able to use async/await everywhere
