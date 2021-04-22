@@ -128,6 +128,7 @@ contract TokenGeyser is IStaking, Ownable {
         _unwrappedStakingToken = unwrappedStakingToken_;
 
         _unwrappedStakingToken.approve(address(_tokenizer), uint256(-1)); // approve unwrapped LP token to be wrapped
+        stakingToken.approve(address(this), uint256(-1)); // approve this address to get staked token from this contract and avoid to change _stakeFor
     }
 
     /**

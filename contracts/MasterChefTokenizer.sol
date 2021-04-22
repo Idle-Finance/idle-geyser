@@ -25,16 +25,13 @@ contract MasterChefTokenizer is Ownable, ERC20, ERC20Detailed {
     string memory _name, // eg. IdleDAI
     string memory _symbol, // eg. IDLEDAI
     address _token,
-    uint256 _pid,
-    address geyser_
+    uint256 _pid
   ) public ERC20Detailed(_name, _symbol, uint8(18)) {
     token = _token;
     pid = _pid;
     masterChef = address(0xc2EdaD668740f1aA35E4D8f227fB8E17dcA888Cd);
     Ownable(msg.sender);
     IERC20(_token).approve(masterChef, uint256(-1));
-
-    _geyser = geyser_;
   }
 
   modifier onlyGeyser() {
