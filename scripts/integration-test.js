@@ -30,11 +30,13 @@ async function main() {
   console.log(`Using sender address ${senderAddress}`)
 
   let idleToken = addresses.networks.mainnet.idle;
+  let sushiToken = addresses.networks.mainnet.sushi;
   console.log(`Using the following address for idle Token: ${idleToken}`);
 
   const MasterChefTokenizer = await hre.ethers.getContractFactory("MasterChefTokenizer", signer);
   const TokenGeyser = await hre.ethers.getContractFactory("TokenGeyser", signer);
   const idleTokenContract = await hre.ethers.getContractAt("IERC20", idleToken);
+  const sushiTokenContract = await hre.ethers.getContractAt("IERC20", sushiToken);
 
   const sushiLP = await hre.ethers.getContractAt("IERC20", addresses.networks.mainnet.sushiLPToken);
   let mockLP = sushiLP;
@@ -133,7 +135,19 @@ async function main() {
   console.log('Starting test...')
 
   // Test With geyser single user
-  await singleUserTest(addresses.multisigAddress, toETH('10'), 30, '49000056712962962962'); // 49
+  // Test that sushi in tokeniser contract can be withdrawn
+  let initialSushi = await sushiTokenContract.balanceOf(tokenizer.address)
+  let initialMultisigSushi = await sushiTokenContract.balanceOf(addresses.multisigAddress)
+  await singleUserTest(addresses.multisigAddress, toETH('10'), 30, '49000075617283950616'); // 49
+  let afterStakingSushi = await sushiTokenContract.balanceOf(tokenizer.address)
+
+  checkIncreased(initialSushi, afterStakingSushi, "Sushi balance incresed")
+  let [tokenizerSigned] = await sudo(addresses.multisigAddress, tokenizer);
+  await tokenizerSigned.rescueFunds(sushiToken, addresses.multisigAddress, afterStakingSushi)
+  let afterMultisigSushi = await sushiTokenContract.balanceOf(addresses.multisigAddress)
+  check(afterMultisigSushi, afterStakingSushi, "Sushi transfer amounts equal")
+
+  
   // await singleUserTest(addresses.multisigAddress, toETH('10'), 60, '132000101851851851851'); // 132
   // await singleUserTest(addresses.multisigAddress, toETH('10'), 90, '249000128086419753085'); // 249
   // await singleUserTest(addresses.multisigAddress, toETH('10'), 120, '400000192901234567900'); // 400
