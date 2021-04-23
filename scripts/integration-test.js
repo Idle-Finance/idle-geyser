@@ -4,7 +4,7 @@ const { ethers } = require("hardhat");
 const hre = require("hardhat")
 const { addresses } = require("../lib/index")
 const {time} = require("@openzeppelin/test-helpers")
-const {check, checkIncreased, sudo, toETH, waitDays, resetFork} = require("./helpers")
+const {check, checkIncreased, sudo, toETH, waitDays, resetFork, checkAproximate} = require("./helpers")
 const SIX_MONTHS_IN_SEC = "15552000";
 
 async function main() {
@@ -114,16 +114,20 @@ async function main() {
     const [geyserSigned] = await sudo(usr, geyser);
     let initialBalance = await idleTokenContract.balanceOf(usr)
     console.log(`Unstaking ${amount} LP tokens`);
+    let initialLPBalance = await mockLP.balanceOf(usr)
     await geyserSigned.unstakeAndUnwrap(amount);
     let finalBalance = await idleTokenContract.balanceOf(usr)
-    check(finalBalance.sub(initialBalance), expectedGains);
+    let finalLPBalance = await mockLP.balanceOf(usr)
+    checkAproximate(finalBalance.sub(initialBalance), expectedGains, "Expected idle gains");
+    check(finalLPBalance.sub(initialLPBalance), amount, "Expected LP Token amount")
   }
 
   const singleUserTest = async (usr, amount, days, expectedGains, resetBlock) => {
     let initialBalance = await idleTokenContract.balanceOf(usr)
     await stakeForDays(usr, amount, days);
     let finalBalance = await idleTokenContract.balanceOf(usr)
-    check(finalBalance.sub(initialBalance), expectedGains);
+
+    checkAproximate(finalBalance.sub(initialBalance), expectedGains);
     if (resetBlock) {
       await resetFork(resetBlock);
     }
@@ -138,14 +142,16 @@ async function main() {
   // Test that sushi in tokeniser contract can be withdrawn
   let initialSushi = await sushiTokenContract.balanceOf(tokenizer.address)
   let initialMultisigSushi = await sushiTokenContract.balanceOf(addresses.multisigAddress)
-  await singleUserTest(addresses.multisigAddress, toETH('10'), 30, '49000075617283950616'); // 49
+  await singleUserTest(addresses.multisigAddress, toETH('10'), 30, toETH('49')); // 49
   let afterStakingSushi = await sushiTokenContract.balanceOf(tokenizer.address)
 
-  checkIncreased(initialSushi, afterStakingSushi, "Sushi balance incresed")
+  checkIncreased(initialSushi, afterStakingSushi, "Sushi balance increased")
   let [tokenizerSigned] = await sudo(addresses.multisigAddress, tokenizer);
   await tokenizerSigned.rescueFunds(sushiToken, addresses.multisigAddress, afterStakingSushi)
   let afterMultisigSushi = await sushiTokenContract.balanceOf(addresses.multisigAddress)
-  check(afterMultisigSushi, afterStakingSushi, "Sushi transfer amounts equal")
+  check(afterStakingSushi, afterMultisigSushi, "Sushi transfer amounts equal")
+  checkIncreased(initialMultisigSushi, afterMultisigSushi, "Sushi balance increased for multisig")
+
 
   
   // await singleUserTest(addresses.multisigAddress, toETH('10'), 60, '132000101851851851851'); // 132
@@ -156,11 +162,15 @@ async function main() {
 
   // Test with multiple users and multiple deposits
   // Test 1
-  // await singleUserTest(senderAddress, toETH('10'), 0, toETH('0'));
-  // await singleUserTest(senderAddress2, toETH('10'), 0, toETH('0'));
-  // await waitDays(120);
-  // await unstake(senderAddress, toETH('10'), '200000163966061941386'); // 200
-  // await unstake(senderAddress2, toETH('10'), '200000144675913367255'); // 200
+  
+  await singleUserTest(senderAddress, toETH('10'), 0, toETH('0'));
+  await singleUserTest(senderAddress2, toETH('5'), 0, toETH('0'));
+  
+  await waitDays(150);
+  
+  // total rewards 49 + 367.3 + 183.6 = 600
+  await unstake(senderAddress, toETH('10'), toETH('367.3')); // 367.3
+  await unstake(senderAddress2, toETH('5'), toETH('183.7')); // 183.7
 }
 
 // We recommend this pattern to be able to use async/await everywhere
