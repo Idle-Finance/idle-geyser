@@ -19,6 +19,7 @@ contract MasterChefTokenizer is Ownable, ERC20, ERC20Detailed {
   address public token; // sushi LP share
   address public masterChef;
   uint256 public pid;
+  address private _geyser;
 
   constructor(
     string memory _name, // eg. IdleDAI
@@ -33,6 +34,11 @@ contract MasterChefTokenizer is Ownable, ERC20, ERC20Detailed {
     IERC20(_token).approve(masterChef, uint256(-1));
   }
 
+  modifier onlyGeyser() {
+    require(msg.sender == _geyser, "Tokenizer: Not Geyser");
+    _;
+  }
+
   function wrap(uint256 _amount) external {
     IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
     IMasterChef(masterChef).deposit(pid, _amount);
@@ -43,6 +49,16 @@ contract MasterChefTokenizer is Ownable, ERC20, ERC20Detailed {
     IMasterChef(masterChef).withdraw(pid, _amount);
     _burn(msg.sender, _amount);
     IERC20(token).safeTransfer(_account, _amount);
+  }
+
+  function unwrapFor(uint256 _amount, address _account) external onlyGeyser {
+    IMasterChef(masterChef).withdraw(pid, _amount);
+    _burn(_account, _amount);
+    IERC20(token).safeTransfer(_account, _amount);
+  }
+
+  function transferGeyser(address geyser_) external onlyOwner {
+    _geyser = geyser_;
   }
 
   // used both to rescue SUSHI rewards and eventually other tokens
