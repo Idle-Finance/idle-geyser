@@ -13,7 +13,11 @@ The ampleforth token geyser implementation.
 
 The make the staking experience gas efficient, the tokenizer will automatically wrap and unwrap LP tokens to the geyser through two new methods on the geyser.
 
-`wrapAndStake(uint256 amount)` and `unstakeAndUnwrap(uint256 amount)`
+`wrapAndStake(uint256 amount)` and `unstakeAndUnwrap(uint256 amount)`.
+
+Helper functions have also been added to support the permit pattern
+
+`permitWrapAndStakeUnlimited(...)` and `permitWrapAndStake(...)`
 
 ## Integration tests
 The integration tests for this repo are stored under
