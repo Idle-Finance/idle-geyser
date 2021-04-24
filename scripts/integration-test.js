@@ -3,7 +3,7 @@
 const { ethers } = require("hardhat");
 const hre = require("hardhat")
 const { addresses } = require("../lib/index")
-const {time} = require("@openzeppelin/test-helpers")
+const {expectRevert} = require("@openzeppelin/test-helpers")
 const {check, checkIncreased, sudo, toETH, waitDays, resetFork, checkAproximate} = require("./helpers")
 const SIX_MONTHS_IN_SEC = "15552000";
 
@@ -82,6 +82,36 @@ async function main() {
   const [mockLPSigned, mockLPSigner] = await sudo(addresses.networks.mainnet.userWithSushiLP, mockLP);
   await mockLPSigned.transfer(signer.address, toETH('100')); // 100 LP shares
   console.log(`Using the following address for LP Token: ${mockLP.address}`)
+
+  // test tokenizer ownership
+  let tokenizerOwner = await tokenizer.owner()
+  console.log(`The tokenizer owner is ${tokenizerOwner}`)
+  console.log(`The tokenizer geyser is ${geyser.address}`)
+
+  const [tokenizerUserWithLP, tokenizerSigner] = await sudo(addresses.networks.mainnet.userWithSushiLP, tokenizer)
+  const [tokenizerAsOwner] = await sudo(tokenizerOwner, tokenizer)
+  const [tokenizerAsGeyser] = await sudo(geyser.address, tokenizer)
+  let tokenizerSignerAddress = await tokenizerSigner.getAddress()
+  console.log(`Wrapping 10 LP tokens as ${tokenizerSignerAddress}`)
+  await mockLPSigned.approve(tokenizer.address, toETH('10'))
+  await tokenizerUserWithLP.wrap(toETH('10'))
+
+  let initialLPUserBalance = await mockLPSigned.balanceOf(tokenizerSignerAddress)
+
+  // this call should fail because it is not the geyser
+  await expectRevert(tokenizer.unwrapFor(toETH('10'), tokenizerSignerAddress), "Tokenizer: Not Geyser")
+  check(await tokenizer.balanceOf(tokenizerSignerAddress), toETH('10'), "wLP balance did not decrease")
+  check(await mockLPSigned.balanceOf(tokenizerSignerAddress), initialLPUserBalance, "LP balance 0")
+
+  await expectRevert(tokenizerAsOwner.unwrapFor(toETH('10'), tokenizerSignerAddress), "Tokenizer: Not Geyser")
+  check(await tokenizer.balanceOf(tokenizerSignerAddress), toETH('10'), "wLP balance did not decrease")
+  check(await mockLPSigned.balanceOf(tokenizerSignerAddress), initialLPUserBalance, "LP balance is increased")
+
+
+  // this call should succeed
+  await tokenizerAsGeyser.unwrapFor(toETH('10'), tokenizerSignerAddress, {gasPrice: 0}) // this tx is technically not possible, but is used to demonstrate the role permission
+  check(await tokenizer.balanceOf(tokenizerSignerAddress), toETH('0'), "wLP balance decreased")
+  check(await mockLPSigned.balanceOf(tokenizerSignerAddress), initialLPUserBalance.add(toETH('10')), "LP balance is increased")
 
   const lock = async (amount) => {
     let [multiSigGeyser, multiSigGeyserSigner] = await sudo(addresses.multisigAddress, geyser);
@@ -165,12 +195,14 @@ async function main() {
   
   await singleUserTest(senderAddress, toETH('10'), 0, toETH('0'));
   await singleUserTest(senderAddress2, toETH('5'), 0, toETH('0'));
-  
+
   await waitDays(150);
   
   // total rewards 49 + 367.3 + 183.6 = 600
   await unstake(senderAddress, toETH('10'), toETH('367.3')); // 367.3
   await unstake(senderAddress2, toETH('5'), toETH('183.7')); // 183.7
+
+  // staking period 1 had ended now
 }
 
 // We recommend this pattern to be able to use async/await everywhere
