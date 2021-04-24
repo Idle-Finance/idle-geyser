@@ -39,6 +39,10 @@ contract MasterChefTokenizer is Ownable, ERC20, ERC20Detailed {
     _;
   }
 
+  function geyser() public view returns (address) {
+    return _geyser;
+  }
+
   function wrap(uint256 _amount) external {
     IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
     IMasterChef(masterChef).deposit(pid, _amount);
