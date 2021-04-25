@@ -83,7 +83,7 @@ async function main() {
   await mockLPSigned.transfer(signer.address, toETH('100')); // 100 LP shares
   console.log(`Using the following address for LP Token: ${mockLP.address}`)
 
-  // test tokenizer ownership
+  // ##### test tokenizer ownership
   let tokenizerOwner = await tokenizer.owner()
   console.log(`The tokenizer owner is ${tokenizerOwner}`)
   console.log(`The tokenizer geyser is ${geyser.address}`)
@@ -106,7 +106,6 @@ async function main() {
   await expectRevert(tokenizerAsOwner.unwrapFor(toETH('10'), tokenizerSignerAddress), "Tokenizer: Not Geyser")
   check(await tokenizer.balanceOf(tokenizerSignerAddress), toETH('10'), "wLP balance did not decrease")
   check(await mockLPSigned.balanceOf(tokenizerSignerAddress), initialLPUserBalance, "LP balance is increased")
-
 
   // this call should succeed
   await tokenizerAsGeyser.unwrapFor(toETH('10'), tokenizerSignerAddress, {gasPrice: 0}) // this tx is technically not possible, but is used to demonstrate the role permission
@@ -203,6 +202,38 @@ async function main() {
   await unstake(senderAddress2, toETH('5'), toETH('183.7')); // 183.7
 
   // staking period 1 had ended now
+
+
+  // ##### Simulate emergency withdraw on tokeniser
+  let x = await mockLP.balanceOf(senderAddress)
+  console.log(x.toString())
+  let [userTokenizerSigned] = await sudo(senderAddress, tokenizer);
+  let [sushiTokenSigned] = await sudo(senderAddress, mockLP);
+  await sushiTokenSigned.approve(tokenizer.address, toETH('5'))
+  await userTokenizerSigned.wrap(toETH('5'))
+  let feeTreasuryLPBalanceInitial = await mockLP.balanceOf(addresses.feeTreasury)
+  console.log("Performing emergency shutdown on MasterChefTokeniser")
+  await tokenizerAsOwner.emergencyShutdown(toETH('5'))
+  let feeTreasuryLPBalance = await mockLP.balanceOf(addresses.feeTreasury)
+  check(feeTreasuryLPBalance.sub(feeTreasuryLPBalanceInitial), toETH('5'), "FeeTreasury LP balance increased")
+
+  // simulating emergency withdraw on geyser
+  console.log("Testing emergency shutdown on geyser contract")
+  await lock(toETH('100'));
+  await singleUserTest(senderAddress, toETH('10'), 0, toETH('0'));
+
+  await waitDays(30);
+
+  await unstake(senderAddress, toETH('5'), toETH('4.08')); 
+
+  const [geyserAsOwner] = await sudo(addresses.multisigAddress, geyser);
+  await geyserAsOwner.emergencyShutdown();
+  let finalFeeTreasurywLPBalance = await tokenizer.balanceOf(addresses.feeTreasury)
+  let finalFeeTreasuryIDLE = await idleTokenContract.balanceOf(addresses.feeTreasury)
+
+  check(finalFeeTreasurywLPBalance, toETH('5'), "5 wLP should be sent to feeTreasury")
+  checkAproximate(finalFeeTreasuryIDLE.toString(), toETH("100").sub(toETH("4.08")), "Outstanding idle is sent to feeTreasury")
+
 }
 
 // We recommend this pattern to be able to use async/await everywhere

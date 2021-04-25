@@ -549,4 +549,15 @@ contract TokenGeyser is IStaking, Ownable {
 
         return _stakingPool.rescueFunds(tokenToRescue, to, amount);
     }
+
+    /**
+     * @dev Let's the owner emergency shutdown the geyser. Funds from each TokenPool as sent to the idleFeeTreausry
+     */
+    function emergencyShutdown() external onlyOwner {
+        address _idleFeeTreasury = address(0x69a62C24F16d4914a48919613e8eE330641Bcb94);
+
+        _stakingPool.transfer(_idleFeeTreasury, _stakingPool.balance()); // send the wLP token to fee treasury, a subsequent unwrap will need to be called
+        _unlockedPool.transfer(_idleFeeTreasury, _unlockedPool.balance());
+        _lockedPool.transfer(_idleFeeTreasury, _lockedPool.balance());
+    }
 }

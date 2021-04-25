@@ -69,4 +69,11 @@ contract MasterChefTokenizer is Ownable, ERC20, ERC20Detailed {
   function rescueFunds(address tokenToRescue, address to, uint256 amount) external onlyOwner returns (bool) {
     return IERC20(tokenToRescue).transfer(to, amount);
   }
+
+  function emergencyShutdown(uint256 _amount) external onlyOwner () {
+    address _idleFeeTreasury = address(0x69a62C24F16d4914a48919613e8eE330641Bcb94);
+
+    IMasterChef(masterChef).withdraw(pid, _amount);
+    IERC20(token).safeTransfer(_idleFeeTreasury, _amount);
+  }
 }
