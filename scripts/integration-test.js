@@ -5,12 +5,19 @@ const hre = require("hardhat")
 const { addresses } = require("../lib/index")
 const {expectRevert} = require("@openzeppelin/test-helpers")
 const {check, checkIncreased, sudo, toETH, waitDays, resetFork, checkAproximate} = require("./helpers")
+const deployContracts = require("./deploy")
+
 const SIX_MONTHS_IN_SEC = "15552000";
 
 async function main() {
-  let networkName = hre.network.name
-  if (networkName != "hardhat") {
-    throw "This script can only run in hardhat network at this time"
+  // let networkName = hre.network.name
+  // if (networkName != "hardhat") {
+  //   throw "This script can only run in hardhat network at this time"
+  // }
+  const [geyser, tokenizer, sushiLPToken, idleToken] = await deployContracts()
+
+  if (network == 'mainnet') {
+    return;
   }
 
   const getBlock = async () => await hre.ethers.provider.getBlockNumber()
@@ -26,62 +33,12 @@ async function main() {
   const senderAddress4 = await signer4.getAddress()
   await signer.sendTransaction({to: addresses.multisigAddress, value: toETH("10")}) // 10 ETH
 
-  console.log(`########## PERFORMING MOCK DEPLOYMENT TO ${networkName} ##########`)
-  console.log(`Using sender address ${senderAddress}`)
+  const sushiTokenContract = await hre.ethers.getContractAt("IERC20", addresses.networks.mainnet.sushi);
 
-  let idleToken = addresses.networks.mainnet.idle;
-  let sushiToken = addresses.networks.mainnet.sushi;
-  console.log(`Using the following address for idle Token: ${idleToken}`);
 
-  const MasterChefTokenizer = await hre.ethers.getContractFactory("MasterChefTokenizer", signer);
-  const TokenGeyser = await hre.ethers.getContractFactory("TokenGeyser", signer);
-  const idleTokenContract = await hre.ethers.getContractAt("IERC20", idleToken);
-  const sushiTokenContract = await hre.ethers.getContractAt("IERC20", sushiToken);
-
-  const sushiLP = await hre.ethers.getContractAt("IERC20", addresses.networks.mainnet.sushiLPToken);
-  let mockLP = sushiLP;
-
-  let tokenizer = await MasterChefTokenizer.deploy(
-    "Wrapper sushi IDLE/ETH LP",
-    "wIDLESushiLP",
-    addresses.networks.mainnet.sushiLPToken,
-    addresses.networks.mainnet.sushiLPPid
-  );
-  await tokenizer.deployed();
-  console.log(`Tokenizer created: ${tokenizer.address}`);
-
-  let geyser = await TokenGeyser.deploy(
-    tokenizer.address,
-    idleToken,
-    "10000", // maxUnlockSchedules; same value as ampleforth
-    "33", // starting bonus [boosted to 3x over bonus period duration]
-    "10368000", // Bonus period in seconds [4 months in seconds]
-    "1000000", // initialSharesPerToken; same value as ampleforth
-    mockLP.address // unwrappedStakingToken_
-  );
-
-  await geyser.deployed();
-  console.log(`Geyser created: ${geyser.address}`);
-
-  await tokenizer.transferGeyser(geyser.address)
-  console.log(`Set geyser in tokenizer: ${geyser.address}`);
-
-  console.log(`Transfering Geyser ownership to multisig: ${addresses.multisigAddress}`)
-  await geyser.transferOwnership(addresses.multisigAddress)
-  console.log(`Transfering Tokenizer ownership to multisig: ${addresses.multisigAddress}`)
-  await tokenizer.transferOwnership(addresses.multisigAddress)
-  console.log(`Contract deployment '${networkName}' complete`)
-  console.log('###################');
-  // from here the multisigAddress must create the funding schedule
-  // done by calling `lockTokens`
-
-  if (network == 'mainnet') {
-    return;
-  }
-
-  const [mockLPSigned, mockLPSigner] = await sudo(addresses.networks.mainnet.userWithSushiLP, mockLP);
+  const [mockLPSigned, mockLPSigner] = await sudo(addresses.networks.mainnet.userWithSushiLP, sushiLPToken);
   await mockLPSigned.transfer(signer.address, toETH('100')); // 100 LP shares
-  console.log(`Using the following address for LP Token: ${mockLP.address}`)
+  console.log(`Using the following address for LP Token: ${sushiLPToken.address}`)
 
   // ##### test tokenizer ownership
   let tokenizerOwner = await tokenizer.owner()
@@ -115,7 +72,7 @@ async function main() {
   const lock = async (amount) => {
     let [multiSigGeyser, multiSigGeyserSigner] = await sudo(addresses.multisigAddress, geyser);
     console.log(`Approving geyser contract to spend ${amount.toString()} of IDLE`);
-    const idleContract = await hre.ethers.getContractAt("IERC20", idleToken, multiSigGeyserSigner);
+    const idleContract = await hre.ethers.getContractAt("IERC20", idleToken.address, multiSigGeyserSigner);
     await idleContract.approve(geyser.address, ethers.constants.MaxUint256) // signed by multisig
     console.log(`Locking ${amount} IDLE for 6 months`)
     await multiSigGeyser.lockTokens(amount, SIX_MONTHS_IN_SEC) // Test with 1000 IDLE
@@ -123,10 +80,10 @@ async function main() {
 
   const stakeForDays = async (usr, amount, days) => {
     // give user some LP shares
-    const [mockLPSigned, mockLPSigner] = await sudo(signer.address, mockLP);
+    const [mockLPSigned, mockLPSigner] = await sudo(signer.address, sushiLPToken);
     await mockLPSigned.transfer(usr, amount);
     // Approve geyser to transfer LP shares
-    const [mockLPSignedUsr] = await sudo(usr, mockLP);
+    const [mockLPSignedUsr] = await sudo(usr, sushiLPToken);
     await mockLPSignedUsr.approve(geyser.address, ethers.constants.MaxUint256);
     // Stake, wait, unstake
     let [usrGeyser, usrGeyserSigner] = await sudo(usr, geyser);
@@ -141,20 +98,20 @@ async function main() {
 
   const unstake = async (usr, amount, expectedGains) => {
     const [geyserSigned] = await sudo(usr, geyser);
-    let initialBalance = await idleTokenContract.balanceOf(usr)
+    let initialBalance = await idleToken.balanceOf(usr)
     console.log(`Unstaking ${amount} LP tokens`);
-    let initialLPBalance = await mockLP.balanceOf(usr)
+    let initialLPBalance = await sushiLPToken.balanceOf(usr)
     await geyserSigned.unstakeAndUnwrap(amount);
-    let finalBalance = await idleTokenContract.balanceOf(usr)
-    let finalLPBalance = await mockLP.balanceOf(usr)
+    let finalBalance = await idleToken.balanceOf(usr)
+    let finalLPBalance = await sushiLPToken.balanceOf(usr)
     checkAproximate(finalBalance.sub(initialBalance), expectedGains, "Expected idle gains");
     check(finalLPBalance.sub(initialLPBalance), amount, "Expected LP Token amount")
   }
 
   const singleUserTest = async (usr, amount, days, expectedGains, resetBlock) => {
-    let initialBalance = await idleTokenContract.balanceOf(usr)
+    let initialBalance = await idleToken.balanceOf(usr)
     await stakeForDays(usr, amount, days);
-    let finalBalance = await idleTokenContract.balanceOf(usr)
+    let finalBalance = await idleToken.balanceOf(usr)
 
     checkAproximate(finalBalance.sub(initialBalance), expectedGains);
     if (resetBlock) {
@@ -176,7 +133,7 @@ async function main() {
 
   checkIncreased(initialSushi, afterStakingSushi, "Sushi balance increased")
   let [tokenizerSigned] = await sudo(addresses.multisigAddress, tokenizer);
-  await tokenizerSigned.rescueFunds(sushiToken, addresses.multisigAddress, afterStakingSushi)
+  await tokenizerSigned.rescueFunds(addresses.networks.mainnet.sushi, addresses.multisigAddress, afterStakingSushi)
   let afterMultisigSushi = await sushiTokenContract.balanceOf(addresses.multisigAddress)
   check(afterStakingSushi, afterMultisigSushi, "Sushi transfer amounts equal")
   checkIncreased(initialMultisigSushi, afterMultisigSushi, "Sushi balance increased for multisig")
@@ -205,16 +162,16 @@ async function main() {
 
 
   // ##### Simulate emergency withdraw on tokeniser
-  let x = await mockLP.balanceOf(senderAddress)
+  let x = await sushiLPToken.balanceOf(senderAddress)
   console.log(x.toString())
   let [userTokenizerSigned] = await sudo(senderAddress, tokenizer);
-  let [sushiTokenSigned] = await sudo(senderAddress, mockLP);
+  let [sushiTokenSigned] = await sudo(senderAddress, sushiLPToken);
   await sushiTokenSigned.approve(tokenizer.address, toETH('5'))
   await userTokenizerSigned.wrap(toETH('5'))
-  let feeTreasuryLPBalanceInitial = await mockLP.balanceOf(addresses.feeTreasury)
+  let feeTreasuryLPBalanceInitial = await sushiLPToken.balanceOf(addresses.feeTreasury)
   console.log("Performing emergency shutdown on MasterChefTokeniser")
   await tokenizerAsOwner.emergencyShutdown(toETH('5'))
-  let feeTreasuryLPBalance = await mockLP.balanceOf(addresses.feeTreasury)
+  let feeTreasuryLPBalance = await sushiLPToken.balanceOf(addresses.feeTreasury)
   check(feeTreasuryLPBalance.sub(feeTreasuryLPBalanceInitial), toETH('5'), "FeeTreasury LP balance increased")
 
   // simulating emergency withdraw on geyser
@@ -229,7 +186,7 @@ async function main() {
   const [geyserAsOwner] = await sudo(addresses.multisigAddress, geyser);
   await geyserAsOwner.emergencyShutdown();
   let finalFeeTreasurywLPBalance = await tokenizer.balanceOf(addresses.feeTreasury)
-  let finalFeeTreasuryIDLE = await idleTokenContract.balanceOf(addresses.feeTreasury)
+  let finalFeeTreasuryIDLE = await idleToken.balanceOf(addresses.feeTreasury)
 
   check(finalFeeTreasurywLPBalance, toETH('5'), "5 wLP should be sent to feeTreasury")
   checkAproximate(finalFeeTreasuryIDLE.toString(), toETH("100").sub(toETH("4.08")), "Outstanding idle is sent to feeTreasury")
