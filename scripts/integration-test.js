@@ -10,11 +10,24 @@ const deployContracts = require("./deploy")
 const SIX_MONTHS_IN_SEC = "15552000";
 
 async function main() {
-  // let networkName = hre.network.name
-  // if (networkName != "hardhat") {
-  //   throw "This script can only run in hardhat network at this time"
-  // }
-  const [geyser, tokenizer, sushiLPToken, idleToken] = await deployContracts()
+  // const [geyser, tokenizer, sushiLPToken, idleToken] = await deployContracts()
+  const tokenizer = await hre.ethers.getContractAt("MasterChefTokenizer", addresses.networks.mainnet.tokenizer);
+  const geyser = await hre.ethers.getContractAt("TokenGeyser", addresses.networks.mainnet.geyser);
+
+  const sushiLPToken = await hre.ethers.getContractAt("IERC20", addresses.networks.mainnet.sushiLPToken)
+  const idleToken = await hre.ethers.getContractAt("IERC20", addresses.networks.mainnet.idle);
+
+  const owner = await geyser.owner();
+  console.log('owner', owner);
+  if (owner.toLowerCase() !== addresses.networks.mainnet.multisigAddress) {
+    const [geyserOwner] = await sudo(owner, geyser);
+    console.log(`Transfering Geyser ownership to multisig: ${addresses.multisigAddress}`)
+    await geyserOwner.transferOwnership(addresses.multisigAddress)
+
+    const [tokenizerOwner] = await sudo(owner, tokenizer);
+    console.log(`Transfering Tokenizer ownership to multisig: ${addresses.multisigAddress}`)
+    await tokenizerOwner.transferOwnership(addresses.multisigAddress)
+  }
 
   if (network == 'mainnet') {
     return;
@@ -139,7 +152,7 @@ async function main() {
   checkIncreased(initialMultisigSushi, afterMultisigSushi, "Sushi balance increased for multisig")
 
 
-  
+
   // await singleUserTest(addresses.multisigAddress, toETH('10'), 60, '132000101851851851851'); // 132
   // await singleUserTest(addresses.multisigAddress, toETH('10'), 90, '249000128086419753085'); // 249
   // await singleUserTest(addresses.multisigAddress, toETH('10'), 120, '400000192901234567900'); // 400
@@ -148,12 +161,12 @@ async function main() {
 
   // Test with multiple users and multiple deposits
   // Test 1
-  
+
   await singleUserTest(senderAddress, toETH('10'), 0, toETH('0'));
   await singleUserTest(senderAddress2, toETH('5'), 0, toETH('0'));
 
   await waitDays(150);
-  
+
   // total rewards 49 + 367.3 + 183.6 = 600
   await unstake(senderAddress, toETH('10'), toETH('367.3')); // 367.3
   await unstake(senderAddress2, toETH('5'), toETH('183.7')); // 183.7
@@ -181,7 +194,7 @@ async function main() {
 
   await waitDays(30);
 
-  await unstake(senderAddress, toETH('5'), toETH('4.08')); 
+  await unstake(senderAddress, toETH('5'), toETH('4.08'));
 
   const [geyserAsOwner] = await sudo(addresses.multisigAddress, geyser);
   await geyserAsOwner.emergencyShutdown();

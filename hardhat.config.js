@@ -26,7 +26,8 @@ module.exports = {
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
         // blockNumber: 12270000
-        blockNumber: 12289600
+        // blockNumber: 12289600,
+        blockNumber: 12310055,
       }
     },
     local: {
