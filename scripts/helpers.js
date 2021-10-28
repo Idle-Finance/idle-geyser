@@ -11,7 +11,7 @@ module.exports = {
   checkAproximate: (a, b, message) => { // check a is withing 5% of b
     a = BigNumber.from(a.toString())
     b = BigNumber.from(b.toString())
-    
+
     let _check
     if (b.eq(BigNumber.from('0'))) {
         _check = a.eq(b)
@@ -36,6 +36,7 @@ module.exports = {
     return [contract, signer];
   },
   waitDays: async d => {
+    console.log(`Waiting ${d} days`);
     await time.increase(time.duration.days(d));
   },
   // resetFork: async blockNumber => {

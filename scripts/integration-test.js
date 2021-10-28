@@ -36,7 +36,7 @@ async function main() {
   const getBlock = async () => await hre.ethers.provider.getBlockNumber()
 
   // transfer 10 ETH to multisig
-  let signer = (await hre.ethers.getSigners())[0];
+  let signer  = (await hre.ethers.getSigners())[0];
   let signer2 = (await hre.ethers.getSigners())[1];
   let signer3 = (await hre.ethers.getSigners())[2];
   let signer4 = (await hre.ethers.getSigners())[3];

@@ -24,10 +24,12 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+        // url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+        url: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
         // blockNumber: 12270000
         // blockNumber: 12289600,
-        blockNumber: 12310055,
+        // blockNumber: 12310055,
+        blockNumber: 20672000,
       }
     },
     local: {
@@ -35,6 +37,13 @@ module.exports = {
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_MAINNET_KEY}`
+    },
+    matic: {
+      url: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      gasPrice: 'auto',
+      gas: 'auto',
+      timeout: 1200000,
+      chainId: 137
     },
     kovan: {
       url: `https://kovan.infura.io/v3/${process.env.INFURA_KOVAN_KEY}`
