@@ -6,7 +6,6 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "hardhat/console.sol";
 
 interface IMasterChef {
   function deposit(uint256 _pid, uint256 _amount, address _to) external;
@@ -59,7 +58,6 @@ contract MasterChefTokenizerPolygon is Ownable, ERC20, ERC20Detailed {
   }
 
   function unwrapFor(uint256 _amount, address _account) external onlyGeyser {
-    console.log(IERC20(token).balanceOf(masterChef));
     IMasterChef(masterChef).withdrawAndHarvest(pid, _amount, address(this));
     _burn(_account, _amount);
     IERC20(token).safeTransfer(_account, _amount);
