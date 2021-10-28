@@ -9,6 +9,8 @@ const { HardwareSigner } = require("../lib/HardwareSigner")
 const { addresses } = require("../lib/index")
 const { check } = require("./helpers")
 
+const { LedgerSigner } = require("@ethersproject/hardware-wallets");
+
 
 async function deployContracts() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -27,6 +29,8 @@ async function deployContracts() {
       signer = (await hre.ethers.getSigners())[0]; break;
     case 'mainnet':
       signer = new HardwareSigner(ethers.provider, null, "m/44'/60'/0'/0/0"); break;
+    case 'matic':
+      signer = new LedgerSigner(ethers.provider, undefined, "m/44'/60'/0'/0/0"); break;
     default:
       throw `Invalid network detected for deployment: ${networkName}`
   }
@@ -34,10 +38,8 @@ async function deployContracts() {
   console.log(`########## DEPLOYING TO ${networkName} ##########`)
   senderAddress = await signer.getAddress()
   senderBalance = await signer.getBalance()
-  let gasPrice = hre.ethers.utils.parseUnits("55", "gwei")
   console.log(`Using sender address ${senderAddress}`)
   console.log(`Sender Balance (ETH): ${senderBalance}`)
-  console.log(`Using a gas price of: ${ethers.utils.formatUnits(gasPrice, "gwei")} GWEI`)
 
   const MasterChefTokenizerPolygon = await hre.ethers.getContractFactory("MasterChefTokenizerPolygon", signer);
   const TokenGeyserPolygon = await hre.ethers.getContractFactory("TokenGeyserPolygon", signer);
@@ -94,8 +96,8 @@ async function deployContracts() {
 
   check(tokenizerToken.toLowerCase(), sushiLPToken.address.toLowerCase(), "Tokenizer token is sushiLP")
 
-  // let geyser = hre.ethers.getContractAt("TokenGeyserPolygon", "<ADDRESS>", signer);
-  // let tokenizer = hre.ethers.getContractAt("MasterChefTokenizerPolygon", "<ADDRESS>", signer);
+  // let geyser = await hre.ethers.getContractAt("TokenGeyserPolygon", addresses.networks.matic.geyser, signer);
+  // let tokenizer = await hre.ethers.getContractAt("MasterChefTokenizerPolygon", addresses.networks.matic.tokenizer, signer);
 
   console.log(`Transfering Geyser ownership to multisig: ${addresses.networks.matic.multisigAddress}`)
   await geyser.transferOwnership(addresses.networks.matic.multisigAddress)
