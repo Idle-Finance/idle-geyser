@@ -22,7 +22,8 @@ async function main() {
     idleToken = await hre.ethers.getContractAt("IERC20", addresses.networks.matic.idle);
   } else {
     console.log('#### Deploying Geyser...')
-    [geyser, tokenizer, sushiLPToken, idleToken] = await deployContracts();
+    const res = await deployContracts();
+    [geyser, tokenizer, sushiLPToken, idleToken] = res;
   }
 
   const owner = await geyser.owner();
@@ -65,7 +66,6 @@ async function main() {
 
   // Give slpAmount of SLP from MiniChef to userWithSushiLP
   const [slpContract] = await sudo(masterchef, sushiLPToken);
-  // await slpContract.transfer(userWithSushiLP, slpAmount)
 
   // Get sushi contract
   const sushiTokenContract = await hre.ethers.getContractAt("IERC20", addresses.networks.matic.sushi);
@@ -182,9 +182,15 @@ async function main() {
   // from day 30 to day 60 rewards are reduced linearly from 33% of day 30 to 0% of day 60
   // after day 60 rewards are not reduced
 
+  // await singleUserTest(userWithSushiLP, toETH('0.01'), 30, toETH('67'));
   await singleUserTest(multisig, toETH('0.01'), 30, toETH('67'));
-  let afterStakingSushi = await sushiTokenContract.balanceOf(tokenizer.address)
 
+  // let sushiBalMultisig = await sushiTokenContract.balanceOf(multisig)
+  // await tokenizerAsOwner.harvestRewards();
+  // let sushiBalAfterMultisig = await sushiTokenContract.balanceOf(multisig)
+  // checkIncreased(sushiBalMultisig, sushiBalAfterMultisig, "Sushi balance increased")
+
+  let afterStakingSushi = await sushiTokenContract.balanceOf(tokenizer.address)
   checkIncreased(initialSushi, afterStakingSushi, "Sushi balance increased")
   let [tokenizerSigned] = await sudo(multisig, tokenizer);
   await tokenizerSigned.rescueFunds(addresses.networks.matic.sushi, multisig, afterStakingSushi)
