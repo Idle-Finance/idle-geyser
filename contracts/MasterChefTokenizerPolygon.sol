@@ -52,13 +52,15 @@ contract MasterChefTokenizerPolygon is Ownable, ERC20, ERC20Detailed {
   }
 
   function unwrap(uint256 _amount, address _account) external {
-    IMasterChef(masterChef).withdrawAndHarvest(pid, _amount, address(this));
+    // IMasterChef(masterChef).withdrawAndHarvest(pid, _amount, address(this));
+    IMasterChef(masterChef).withdraw(pid, _amount, address(this));
     _burn(msg.sender, _amount);
     IERC20(token).safeTransfer(_account, _amount);
   }
 
   function unwrapFor(uint256 _amount, address _account) external onlyGeyser {
-    IMasterChef(masterChef).withdrawAndHarvest(pid, _amount, address(this));
+    // IMasterChef(masterChef).withdrawAndHarvest(pid, _amount, address(this));
+    IMasterChef(masterChef).withdraw(pid, _amount, address(this));
     _burn(_account, _amount);
     IERC20(token).safeTransfer(_account, _amount);
   }
@@ -72,11 +74,16 @@ contract MasterChefTokenizerPolygon is Ownable, ERC20, ERC20Detailed {
     return IERC20(tokenToRescue).transfer(to, amount);
   }
 
+  // used both to rescue SUSHI rewards and eventually other tokens
+  function harvestRewards() external onlyOwner returns () {
+    // Idle Treasury League Multisig wallet on polygon
+    IMasterChef(masterChef).harvest(pid, address(0x61A944Ca131Ab78B23c8449e0A2eF935981D5cF6));
+  }
+
   function emergencyShutdown(uint256 _amount) external onlyOwner {
     // Idle Treasury League Multisig wallet on polygon
     address _idleFeeTreasury = address(0x61A944Ca131Ab78B23c8449e0A2eF935981D5cF6);
-
-    IMasterChef(masterChef).withdrawAndHarvest(pid, _amount, address(this));
+    IMasterChef(masterChef).withdraw(pid, _amount, address(this));
     IERC20(token).safeTransfer(_idleFeeTreasury, _amount);
   }
 }
